@@ -34,6 +34,7 @@ export function PrefectureDetailClient({
   const [saving, setSaving] = useState(false);
   const [togglingVisited, setTogglingVisited] = useState(false);
   const [visited, setVisited] = useState(false);
+  const [hasJournal, setHasJournal] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [visitDate, setVisitDate] = useState("");
@@ -91,6 +92,7 @@ export function PrefectureDetailClient({
 
       if (!ignore) {
         setVisited(Boolean(visitedResult.data?.visited));
+        setHasJournal(Boolean(journalResult.data));
         setTitle(journalResult.data?.title ?? "");
         setContent(journalResult.data?.content ?? "");
         setVisitDate(journalResult.data?.visit_date ?? "");
@@ -194,9 +196,12 @@ export function PrefectureDetailClient({
       return;
     }
 
+    setHasJournal(true);
     setMessage({
       type: "success",
-      text: "저널이 저장되었습니다."
+      text: hasJournal
+        ? "저장된 저널이 수정되었습니다."
+        : "새 저널이 저장되었습니다."
     });
     setSaving(false);
   }
@@ -268,6 +273,20 @@ export function PrefectureDetailClient({
             </p>
           </div>
 
+          {loading ? (
+            <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-4 text-sm text-zinc-400">
+              저장된 저널을 확인하는 중입니다.
+            </div>
+          ) : hasJournal ? (
+            <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 px-4 py-4 text-sm text-zinc-300">
+              이전에 저장한 저널을 불러왔어요. 내용을 수정한 뒤 다시 저장할 수 있습니다.
+            </div>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-dashed border-zinc-700 bg-zinc-950/60 px-4 py-4 text-sm text-zinc-400">
+              아직 작성된 저널이 없습니다. 이번 여행의 제목과 메모를 남겨 첫 기록을 만들어보세요.
+            </div>
+          )}
+
           <div className="mt-6 space-y-5">
             <label className="block">
               <span className="mb-2 block text-sm text-zinc-400">제목</span>
@@ -319,7 +338,13 @@ export function PrefectureDetailClient({
             disabled={loading || saving}
             className="mt-6 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "저장 중..." : "저널 저장"}
+            {saving
+              ? hasJournal
+                ? "수정 저장 중..."
+                : "저장 중..."
+              : hasJournal
+                ? "저널 수정 저장"
+                : "저널 저장"}
           </button>
         </form>
       </section>

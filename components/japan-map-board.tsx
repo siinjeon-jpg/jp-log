@@ -1,8 +1,11 @@
 "use client";
 
+import Image from "next/image";
+
 import {
-  JAPAN_MAP_HOTSPOTS,
-  JAPAN_SILHOUETTE_PATHS
+  JAPAN_MAP_ASSET_PATH,
+  JAPAN_MAP_REGIONS,
+  JAPAN_MAP_VIEW_BOX
 } from "@/lib/japan-map-data";
 import type { PrefectureName, PrefectureSlug } from "@/lib/prefectures";
 
@@ -15,19 +18,17 @@ type JapanMapBoardProps = {
 function getRegionColors(isVisited: boolean) {
   if (isVisited) {
     return {
-      fill: "#f5f5f5",
-      stroke: "rgba(255,255,255,0.9)",
-      label: "#050505",
-      helper: "rgba(5,5,5,0.62)",
-      halo: "rgba(255,255,255,0.16)"
+      fill: "rgba(255,255,255,0.82)",
+      stroke: "rgba(255,255,255,0.98)",
+      label: "#ffffff",
+      halo: "rgba(255,255,255,0.14)"
     };
   }
 
   return {
-    fill: "rgba(32,32,36,0.96)",
-    stroke: "rgba(113,113,122,0.95)",
-    label: "#fafafa",
-    helper: "#a1a1aa",
+    fill: "rgba(39,39,42,0.56)",
+    stroke: "rgba(113,113,122,0.88)",
+    label: "#f4f4f5",
     halo: "rgba(255,255,255,0.05)"
   };
 }
@@ -41,16 +42,25 @@ export function JapanMapBoard({
     <div className="relative overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-900/60 p-5 sm:p-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_22rem)]" />
 
-      <div className="relative">
+      <div className="relative overflow-hidden rounded-[1.5rem] border border-zinc-800/80 bg-black/30">
+        <div className="relative aspect-[1000/846] w-full">
+          <Image
+            src={JAPAN_MAP_ASSET_PATH}
+            alt=""
+            fill
+            priority
+            className="pointer-events-none select-none object-contain"
+          />
+
         <svg
-          viewBox="0 0 760 520"
-          className="w-full"
+          viewBox={JAPAN_MAP_VIEW_BOX}
+          className="absolute inset-0 h-full w-full"
           role="img"
           aria-label="일본 여행 지도"
         >
           <defs>
             <filter
-              id="regionGlow"
+              id="prefectureGlow"
               x="-40%"
               y="-40%"
               width="180%"
@@ -59,81 +69,13 @@ export function JapanMapBoard({
               <feDropShadow
                 dx="0"
                 dy="12"
-                stdDeviation="14"
-                floodColor="rgba(0,0,0,0.28)"
+                stdDeviation="10"
+                floodColor="rgba(0,0,0,0.4)"
               />
             </filter>
-            <linearGradient id="boardGlow" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.05)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0.01)" />
-            </linearGradient>
           </defs>
 
-          <rect
-            x="18"
-            y="18"
-            width="724"
-            height="484"
-            rx="26"
-            fill="rgba(9,9,11,0.5)"
-            stroke="rgba(63,63,70,0.75)"
-          />
-          <rect
-            x="42"
-            y="42"
-            width="676"
-            height="436"
-            rx="22"
-            fill="url(#boardGlow)"
-            stroke="rgba(63,63,70,0.35)"
-          />
-          <path
-            d="M510 140 L537 188 L563 214"
-            fill="none"
-            stroke="rgba(113,113,122,0.22)"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M512 422 L548 438 L587 444"
-            fill="none"
-            stroke="rgba(113,113,122,0.22)"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          <path
-            d={JAPAN_SILHOUETTE_PATHS.hokkaido}
-            fill="rgba(42,42,47,0.82)"
-            stroke="rgba(96,96,106,0.95)"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-          <path
-            d={JAPAN_SILHOUETTE_PATHS.honshu}
-            fill="rgba(48,48,54,0.82)"
-            stroke="rgba(96,96,106,0.95)"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-          <path
-            d={JAPAN_SILHOUETTE_PATHS.kyushu}
-            fill="rgba(42,42,47,0.82)"
-            stroke="rgba(96,96,106,0.95)"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-          <path
-            d={JAPAN_SILHOUETTE_PATHS.okinawa}
-            fill="rgba(42,42,47,0.82)"
-            stroke="rgba(96,96,106,0.95)"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-
-          {JAPAN_MAP_HOTSPOTS.map((region) => {
+          {JAPAN_MAP_REGIONS.map((region) => {
             const isVisited = visited[region.label];
             const colors = getRegionColors(isVisited);
 
@@ -142,7 +84,7 @@ export function JapanMapBoard({
                 key={region.slug}
                 role="link"
                 tabIndex={loading ? -1 : 0}
-                aria-pressed={isVisited}
+                aria-label={`${region.label} ${isVisited ? "기록 보기" : "기록 남기기"}`}
                 onClick={() => {
                   if (!loading) {
                     onPrefectureSelect(region.slug);
@@ -156,28 +98,27 @@ export function JapanMapBoard({
                 }}
                 className="cursor-pointer outline-none"
               >
-                <circle
-                  cx={region.cx}
-                  cy={region.cy}
-                  r={region.r + 10}
-                  fill={colors.halo}
-                />
-                <circle
-                  cx={region.cx}
-                  cy={region.cy}
-                  r={region.r}
+                <use
+                  href={`${JAPAN_MAP_ASSET_PATH}#${region.pathId}`}
                   fill={colors.fill}
                   stroke={colors.stroke}
-                  strokeWidth="2.5"
-                  filter="url(#regionGlow)"
+                  strokeWidth="2"
+                  filter="url(#prefectureGlow)"
                   className="transition-all duration-200"
+                />
+                <use
+                  href={`${JAPAN_MAP_ASSET_PATH}#${region.pathId}`}
+                  fill="none"
+                  stroke={colors.halo}
+                  strokeWidth="8"
+                  opacity="0.9"
                 />
                 {region.labelLine ? (
                   <path
                     d={region.labelLine}
                     fill="none"
-                    stroke={isVisited ? colors.helper : "rgba(113,113,122,0.8)"}
-                    strokeWidth="1.5"
+                    stroke="rgba(212,212,216,0.58)"
+                    strokeWidth="1.6"
                     strokeLinecap="round"
                   />
                 ) : null}
@@ -185,25 +126,20 @@ export function JapanMapBoard({
                   x={region.labelX}
                   y={region.labelY}
                   textAnchor={region.labelAnchor ?? "middle"}
-                  fontSize="16"
+                  fontSize="18"
                   fontWeight="700"
                   fill={colors.label}
+                  stroke="rgba(9,9,11,0.95)"
+                  strokeWidth="5"
+                  paintOrder="stroke"
                 >
                   {region.label}
-                </text>
-                <text
-                  x={region.labelX}
-                  y={region.labelY + 17}
-                  textAnchor={region.labelAnchor ?? "middle"}
-                  fontSize="10.5"
-                  fill={colors.helper}
-                >
-                  {loading ? "불러오는 중" : isVisited ? "기록 보기" : "기록 남기기"}
                 </text>
               </g>
             );
           })}
         </svg>
+        </div>
       </div>
 
       <div className="mt-4 flex justify-center sm:mt-6">
