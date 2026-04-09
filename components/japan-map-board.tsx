@@ -1,13 +1,19 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 
 import {
   JAPAN_MAP_ASSET_PATH,
-  JAPAN_MAP_REGIONS,
   JAPAN_MAP_VIEW_BOX
 } from "@/lib/japan-map-data";
-import type { PrefectureName, PrefectureSlug } from "@/lib/prefectures";
+import {
+  PREFECTURES,
+  getPrefectureBySlug,
+  type PrefectureMeta,
+  type PrefectureName,
+  type PrefectureSlug
+} from "@/lib/prefectures";
 
 type JapanMapBoardProps = {
   loading: boolean;
@@ -15,22 +21,36 @@ type JapanMapBoardProps = {
   onPrefectureSelect: (slug: PrefectureSlug) => void;
 };
 
-function getRegionColors(isVisited: boolean) {
+function getPrefectureColors(isVisited: boolean, isActive: boolean) {
   if (isVisited) {
     return {
-      fill: "rgba(255,255,255,0.82)",
+      fill: isActive ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.84)",
       stroke: "rgba(255,255,255,0.98)",
-      label: "#ffffff",
-      halo: "rgba(255,255,255,0.14)"
+      halo: isActive ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.12)"
+    };
+  }
+
+  if (isActive) {
+    return {
+      fill: "rgba(63,63,70,0.82)",
+      stroke: "rgba(228,228,231,0.82)",
+      halo: "rgba(255,255,255,0.08)"
     };
   }
 
   return {
-    fill: "rgba(39,39,42,0.56)",
-    stroke: "rgba(113,113,122,0.88)",
-    label: "#f4f4f5",
-    halo: "rgba(255,255,255,0.05)"
+    fill: "rgba(24,24,27,0.32)",
+    stroke: "rgba(113,113,122,0.62)",
+    halo: "rgba(255,255,255,0.04)"
   };
+}
+
+function getHoveredText(prefecture: PrefectureMeta | null, isVisited: boolean | null) {
+  if (!prefecture) {
+    return "마우스를 올리면 지역 이름이 보이고, 클릭하면 여행 기록 페이지로 이동합니다";
+  }
+
+  return `${prefecture.name} · ${isVisited ? "방문 완료" : "아직 기록 전"}`;
 }
 
 export function JapanMapBoard({
@@ -38,6 +58,13 @@ export function JapanMapBoard({
   visited,
   onPrefectureSelect
 }: JapanMapBoardProps) {
+  const [hoveredSlug, setHoveredSlug] = useState<PrefectureSlug | null>(null);
+
+  const hoveredPrefecture = hoveredSlug ? getPrefectureBySlug(hoveredSlug) : null;
+  const hoveredVisited = hoveredPrefecture
+    ? visited[hoveredPrefecture.name]
+    : null;
+
   return (
     <div className="relative overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-900/60 p-5 sm:p-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_22rem)]" />
@@ -52,99 +79,103 @@ export function JapanMapBoard({
             className="pointer-events-none select-none object-contain"
           />
 
-        <svg
-          viewBox={JAPAN_MAP_VIEW_BOX}
-          className="absolute inset-0 h-full w-full"
-          role="img"
-          aria-label="일본 여행 지도"
-        >
-          <defs>
-            <filter
-              id="prefectureGlow"
-              x="-40%"
-              y="-40%"
-              width="180%"
-              height="180%"
-            >
-              <feDropShadow
-                dx="0"
-                dy="12"
-                stdDeviation="10"
-                floodColor="rgba(0,0,0,0.4)"
-              />
-            </filter>
-          </defs>
-
-          {JAPAN_MAP_REGIONS.map((region) => {
-            const isVisited = visited[region.label];
-            const colors = getRegionColors(isVisited);
-
-            return (
-              <g
-                key={region.slug}
-                role="link"
-                tabIndex={loading ? -1 : 0}
-                aria-label={`${region.label} ${isVisited ? "기록 보기" : "기록 남기기"}`}
-                onClick={() => {
-                  if (!loading) {
-                    onPrefectureSelect(region.slug);
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if ((event.key === "Enter" || event.key === " ") && !loading) {
-                    event.preventDefault();
-                    onPrefectureSelect(region.slug);
-                  }
-                }}
-                className="cursor-pointer outline-none"
+          <svg
+            viewBox={JAPAN_MAP_VIEW_BOX}
+            className="absolute inset-0 h-full w-full"
+            role="img"
+            aria-label="일본 여행 지도"
+          >
+            <defs>
+              <filter
+                id="prefectureGlow"
+                x="-40%"
+                y="-40%"
+                width="180%"
+                height="180%"
               >
-                <use
-                  href={`${JAPAN_MAP_ASSET_PATH}#${region.pathId}`}
-                  fill={colors.fill}
-                  stroke={colors.stroke}
-                  strokeWidth="2"
-                  filter="url(#prefectureGlow)"
-                  className="transition-all duration-200"
+                <feDropShadow
+                  dx="0"
+                  dy="10"
+                  stdDeviation="8"
+                  floodColor="rgba(0,0,0,0.42)"
                 />
-                <use
-                  href={`${JAPAN_MAP_ASSET_PATH}#${region.pathId}`}
-                  fill="none"
-                  stroke={colors.halo}
-                  strokeWidth="8"
-                  opacity="0.9"
-                />
-                {region.labelLine ? (
-                  <path
-                    d={region.labelLine}
-                    fill="none"
-                    stroke="rgba(212,212,216,0.58)"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                ) : null}
-                <text
-                  x={region.labelX}
-                  y={region.labelY}
-                  textAnchor={region.labelAnchor ?? "middle"}
-                  fontSize="18"
-                  fontWeight="700"
-                  fill={colors.label}
-                  stroke="rgba(9,9,11,0.95)"
-                  strokeWidth="5"
-                  paintOrder="stroke"
+              </filter>
+            </defs>
+
+            {PREFECTURES.map((prefecture) => {
+              const isVisited = visited[prefecture.name];
+              const isActive = hoveredSlug === prefecture.slug;
+              const colors = getPrefectureColors(isVisited, isActive);
+              const statusText = loading
+                ? "불러오는 중"
+                : isVisited
+                  ? "방문 완료"
+                  : "아직 기록 전";
+
+              return (
+                <g
+                  key={prefecture.slug}
+                  role="link"
+                  tabIndex={loading ? -1 : 0}
+                  aria-label={`${prefecture.name} ${statusText}`}
+                  onMouseEnter={() => setHoveredSlug(prefecture.slug)}
+                  onMouseLeave={() => {
+                    setHoveredSlug((current) =>
+                      current === prefecture.slug ? null : current
+                    );
+                  }}
+                  onFocus={() => setHoveredSlug(prefecture.slug)}
+                  onBlur={() => {
+                    setHoveredSlug((current) =>
+                      current === prefecture.slug ? null : current
+                    );
+                  }}
+                  onClick={() => {
+                    if (!loading) {
+                      onPrefectureSelect(prefecture.slug);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if ((event.key === "Enter" || event.key === " ") && !loading) {
+                      event.preventDefault();
+                      onPrefectureSelect(prefecture.slug);
+                    }
+                  }}
+                  className="cursor-pointer outline-none"
                 >
-                  {region.label}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+                  <title>{prefecture.name}</title>
+
+                  {isVisited || isActive ? (
+                    <use
+                      href={`${JAPAN_MAP_ASSET_PATH}#${prefecture.svgId}`}
+                      fill="none"
+                      stroke={colors.halo}
+                      strokeWidth={isActive ? "6" : "4"}
+                      opacity="0.95"
+                    />
+                  ) : null}
+
+                  <use
+                    href={`${JAPAN_MAP_ASSET_PATH}#${prefecture.svgId}`}
+                    fill={colors.fill}
+                    stroke={colors.stroke}
+                    strokeWidth={isActive ? "1.8" : "1.1"}
+                    filter={isVisited || isActive ? "url(#prefectureGlow)" : undefined}
+                    className="transition-all duration-200"
+                  />
+                </g>
+              );
+            })}
+          </svg>
         </div>
       </div>
 
-      <div className="mt-4 flex justify-center sm:mt-6">
+      <div className="mt-4 flex flex-col gap-3 sm:mt-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="rounded-full border border-zinc-800 bg-black/40 px-4 py-2 text-xs text-zinc-500">
-          밝게 표시된 지점은 방문 완료, 어두운 지점은 아직 기록 전입니다
+          밝게 표시된 지역은 방문 완료입니다
+        </div>
+        <div className="rounded-full border border-zinc-800 bg-black/40 px-4 py-2 text-xs text-zinc-400">
+          {getHoveredText(hoveredPrefecture ?? null, hoveredVisited)}
         </div>
       </div>
     </div>
